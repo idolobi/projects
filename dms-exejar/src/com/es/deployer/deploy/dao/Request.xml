@@ -1,0 +1,775 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap      
+    PUBLIC "-//ibatis.apache.org//DTD SQL Map 2.0//EN"      
+    "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+<sqlMap namespace="Request">
+	<typeAlias alias="requestDto" type="com.es.deployer.deploy.dto.BaseRequestDto" />
+	<typeAlias alias="requestCountDto" type="com.es.deployer.deploy.dto.RequestCountDto" />
+	<typeAlias alias="sourceDto"  type="com.es.deployer.deploy.dto.SourceDto" />
+	<typeAlias alias="statusDto"  type="com.es.deployer.doc.dto.StatusDto" />
+	
+	<!-- 대상소스 검토 필요 사용안함 -->
+	<select id="SelectSvnSource" parameterClass="map" resultClass="sourceDto">
+	<![CDATA[
+		SELECT b.proj_id AS projId
+			 , b.src_grup_cd AS srcGrupCd
+			 , b.dep_req_id AS depReqId
+			 , b.seq AS seq
+			 , b.svn_src_url AS svnSrcUrl
+			 , b.svn_src_nm AS svnSrcNm
+			 , b.svn_src_rev_num AS svnSrcRevNum
+			 , b.svn_src_athr_id AS svnSrcAthrId
+			 , b.svn_repos_cd AS svnReposCd
+			 , b.first_inpt_usr_id AS firstInptUsrId
+			 , b.first_inpt_time AS firstInptTime
+			 , b.last_modi_usr_id AS lastModiUsrId
+			 , b.last_modi_time AS lastModiTime
+		  FROM tb_rq001 a
+		     , tb_rq002 b
+		     , tb_rq003 c
+		 WHERE a.proj_id = #projId#
+		   AND a.dep_id = #depId#
+		   AND b.proj_id = a.proj_id
+		   AND b.src_grup_cd = a.src_grup_cd
+		   AND b.dep_req_id = a.dep_req_id
+		   AND c.proj_id = a.proj_id
+		   AND c.src_grup_cd = a.src_grup_cd
+		   AND c.dep_req_id = a.dep_req_id
+		   AND c.phs_cd = #phsCd#   
+		   AND c.phs_proc_seq = (SELECT MAX(phs_proc_seq) 
+		                          FROM tb_rq003 
+		                         WHERE proj_id = a.proj_id
+		                           AND src_grup_cd = a.src_grup_cd
+		                           AND dep_req_id = a.dep_req_id)
+		ORDER BY b.svn_src_url, b.svn_src_nm, b.svn_src_rev_num
+	]]>
+	</select>
+	
+	<!-- 접수 단계 이후에도 다시 배포할 수 있으므로 IN절을 사용 -->
+	<select id="SelectSvnSourceForTest" parameterClass="map" resultClass="sourceDto">
+	<![CDATA[
+		SELECT /* SelectSvnSourceForTest */ 
+		     b.proj_id AS projId
+			 , b.src_grup_cd AS srcGrupCd
+			 , b.dep_req_id AS depReqId
+			 , b.seq AS seq
+			 , b.svn_src_url AS svnSrcUrl
+			 , b.svn_src_nm AS svnSrcNm
+			 , b.svn_src_rev_num AS svnSrcRevNum
+			 , b.svn_src_athr_id AS svnSrcAthrId
+			 , b.svn_repos_cd AS svnReposCd
+			 , b.first_inpt_usr_id AS firstInptUsrId
+			 , b.first_inpt_time AS firstInptTime
+			 , b.last_modi_usr_id AS lastModiUsrId
+			 , b.last_modi_time AS lastModiTime
+		  FROM tb_rq001 a
+		     , tb_rq002 b
+		     , tb_rq003 c
+		 WHERE a.proj_id = #projId#
+		   AND a.dep_id = #depId#
+		   AND b.proj_id = a.proj_id
+		   AND b.src_grup_cd = a.src_grup_cd
+		   AND b.dep_req_id = a.dep_req_id
+		   AND c.proj_id = a.proj_id
+		   AND c.src_grup_cd = a.src_grup_cd
+		   AND c.dep_req_id = a.dep_req_id
+		   AND c.phs_cd IN (SELECT phs_cd 
+		                      FROM tb_cm012 
+		                     WHERE proj_id = a.proj_id 
+		                       AND doc_id = a.doc_id 
+		                       AND use_yn = 'Y' 
+		                       AND phs_cd >= '30' 
+		                       AND fwd_bwd_div_cd = 'F')		   
+		   AND c.phs_proc_seq = (SELECT MAX(phs_proc_seq) 
+		                          FROM tb_rq003 
+		                         WHERE proj_id = a.proj_id
+		                           AND src_grup_cd = a.src_grup_cd
+		                           AND dep_req_id = a.dep_req_id)
+		ORDER BY b.svn_src_url, b.svn_src_nm, b.svn_src_rev_num DESC
+	]]>
+	</select>
+	
+	<!-- 테스트성공 단계 이후에도 다시 배포할 수 있으므로 IN절을 사용 -->
+	<select id="SelectSvnSourceForReal" parameterClass="map" resultClass="sourceDto">
+	<![CDATA[
+		SELECT /* SelectSvnSourceForReal */ 
+		     b.proj_id AS projId
+			 , b.src_grup_cd AS srcGrupCd
+			 , b.dep_req_id AS depReqId
+			 , b.seq AS seq
+			 , b.svn_src_url AS svnSrcUrl
+			 , b.svn_src_nm AS svnSrcNm
+			 , b.svn_src_rev_num AS svnSrcRevNum
+			 , b.svn_src_athr_id AS svnSrcAthrId
+			 , b.svn_repos_cd AS svnReposCd
+			 , b.first_inpt_usr_id AS firstInptUsrId
+			 , b.first_inpt_time AS firstInptTime
+			 , b.last_modi_usr_id AS lastModiUsrId
+			 , b.last_modi_time AS lastModiTime
+		  FROM tb_rq001 a
+		     , tb_rq002 b
+		     , tb_rq003 c
+		 WHERE a.proj_id = #projId#
+		   AND a.dep_id = #depId#
+		   AND b.proj_id = a.proj_id
+		   AND b.src_grup_cd = a.src_grup_cd
+		   AND b.dep_req_id = a.dep_req_id
+		   AND c.proj_id = a.proj_id
+		   AND c.src_grup_cd = a.src_grup_cd
+		   AND c.dep_req_id = a.dep_req_id
+		   AND c.phs_cd IN (SELECT phs_cd 
+		                      FROM tb_cm012 
+		                     WHERE proj_id = a.proj_id 
+		                       AND doc_id = a.doc_id 
+		                       AND use_yn = 'Y' 
+		                       AND phs_cd >= '60' 
+		                       AND fwd_bwd_div_cd = 'F')	   
+		   AND c.phs_proc_seq = (SELECT MAX(phs_proc_seq) 
+		                          FROM tb_rq003 
+		                         WHERE proj_id = a.proj_id
+		                           AND src_grup_cd = a.src_grup_cd
+		                           AND dep_req_id = a.dep_req_id)
+		ORDER BY b.svn_src_url, b.svn_src_nm, b.svn_src_rev_num DESC
+	]]>
+	</select>
+		
+	<!-- 나올 수 없는 쿼리 -->
+	<select id="SelectCommonSourceCount" parameterClass="map" resultClass="Integer">
+	<![CDATA[
+		SELECT NVL(COUNT(b.svn_src_url), 0) AS commCnt
+		  FROM tb_rq001 a
+		     , tb_rq002 b
+		     , tb_rq003 c
+		 WHERE a.proj_id = #projId#
+		   AND a.dep_id = #depId#
+		   AND b.proj_id = a.proj_id
+		   AND b.src_grup_cd = a.src_grup_cd
+		   AND b.dep_req_id = a.dep_req_id
+		   AND c.proj_id = a.proj_id
+		   AND c.src_grup_cd = a.src_grup_cd
+		   AND c.dep_req_id = a.dep_req_id
+		   AND c.phs_cd = #phsCd#
+		   AND c.phs_proc_seq = (SELECT MAX(phs_proc_seq) 
+		                          FROM tb_rq003 
+		                         WHERE proj_id = a.proj_id
+		                           AND src_grup_cd = a.src_grup_cd
+		                           AND dep_req_id = a.dep_req_id)
+		   AND b.svn_src_url like ( FN_GETCOMMSVNREPOSURL(a.proj_id, a.src_grup_cd) ) || '%'	
+	]]>
+	</select>
+	
+	<select id="SelectNewSourceForTest" parameterClass="map" resultClass="sourceDto">
+	<![CDATA[
+		select /* SelectNewSourceForTest */ 
+		     y.proj_id AS projId
+			 , y.src_grup_cd AS srcGrupCd
+			 , y.dep_req_id AS depReqId
+			 , y.seq AS seq
+			 , y.svn_src_url AS svnSrcUrl
+			 , y.svn_src_nm AS svnSrcNm
+			 , y.svn_src_rev_num AS svnSrcRevNum
+			 , y.svn_src_athr_id AS svnSrcAthrId
+			 , y.svn_repos_cd AS svnReposCd
+			 , y.first_inpt_usr_id AS firstInptUsrId
+			 , y.first_inpt_time AS firstInptTime
+			 , y.last_modi_usr_id AS lastModiUsrId
+			 , y.last_modi_time AS lastModiTime
+		  from (
+				select /* 배포요청소스목록 */
+				     b.proj_id
+				     , b.dep_id
+				     , #depPhsDivCd# as dep_phs_div_cd
+				     , c.svn_src_url
+				     , c.svn_src_nm
+				  from tb_rq001 b
+				     , tb_rq002 c
+				     , tb_rq003 d
+				 where b.proj_id = #projId#
+				   and b.dep_id = #depId#
+				   and c.proj_id = b.proj_id
+				   and c.src_grup_cd = b.src_grup_cd
+				   and c.dep_req_id = b.dep_req_id
+				   and d.proj_id = b.proj_id
+				   and d.src_grup_cd = b.src_grup_cd
+				   and d.dep_req_id = b.dep_req_id
+				   AND d.phs_cd IN (SELECT phs_cd 
+				                      FROM tb_cm012 
+				                     WHERE proj_id = b.proj_id 
+				                       AND doc_id = b.doc_id 
+				                       AND use_yn = 'Y' 
+				                       AND phs_cd >= '30' 
+				                       AND fwd_bwd_div_cd = 'F')
+				   and d.phs_proc_seq = (select max(phs_proc_seq) 
+				                           from tb_rq003 
+				                          where proj_id = b.proj_id
+				                            and src_grup_cd = b.src_grup_cd
+				                            and dep_req_id = b.dep_req_id)
+		        minus
+		        select /* 최종배포소스목록 */
+				     a.proj_id
+				     , a.dep_id 
+				     , a.dep_phs_div_cd
+				     , a.svn_src_url
+				     , a.svn_src_nm
+				  from tb_dp006 a
+				 where a.proj_id = #projId#
+				   and a.dep_id = #depId#
+				   and a.dep_phs_div_cd = #depPhsDivCd#
+				   and a.dep_freq = (select CASE max(dep_freq) WHEN 0 THEN 1 ELSE max(dep_freq) END
+				                       from tb_dp006
+				                      where proj_id = #projId#
+				                        and dep_id = #depId#
+				                        and dep_phs_div_cd = #depPhsDivCd#)	) w
+		     , tb_rq001 x
+		     , tb_rq002 y
+		 where x.proj_id = w.proj_id
+		   and x.dep_id = w.dep_id
+		   and y.proj_id = x.proj_id
+		   and y.src_grup_cd = x.src_grup_cd
+		   and y.dep_req_id = x.dep_req_id
+		   and y.svn_src_url = w.svn_src_url
+		   and y.svn_src_nm = w.svn_src_nm
+		 order by y.svn_src_url, y.svn_src_nm, y.svn_src_rev_num
+	]]>
+	</select>
+	
+	<select id="SelectNewSourceForReal" parameterClass="map" resultClass="sourceDto">
+	<![CDATA[
+		select /* SelectNewSourceForReal */ 
+		     y.proj_id AS projId
+			 , y.src_grup_cd AS srcGrupCd
+			 , y.dep_req_id AS depReqId
+			 , y.seq AS seq
+			 , y.svn_src_url AS svnSrcUrl
+			 , y.svn_src_nm AS svnSrcNm
+			 , y.svn_src_rev_num AS svnSrcRevNum
+			 , y.svn_src_athr_id AS svnSrcAthrId
+			 , y.svn_repos_cd AS svnReposCd
+			 , y.first_inpt_usr_id AS firstInptUsrId
+			 , y.first_inpt_time AS firstInptTime
+			 , y.last_modi_usr_id AS lastModiUsrId
+			 , y.last_modi_time AS lastModiTime
+		  from (
+				select /* 배포요청소스목록 */
+				     b.proj_id
+				     , b.dep_id
+				     , #depPhsDivCd# as dep_phs_div_cd
+				     , c.svn_src_url
+				     , c.svn_src_nm
+				  from tb_rq001 b
+				     , tb_rq002 c
+				     , tb_rq003 d
+				 where b.proj_id = #projId#
+				   and b.dep_id = #depId#
+				   and c.proj_id = b.proj_id
+				   and c.src_grup_cd = b.src_grup_cd
+				   and c.dep_req_id = b.dep_req_id
+				   and d.proj_id = b.proj_id
+				   and d.src_grup_cd = b.src_grup_cd
+				   and d.dep_req_id = b.dep_req_id
+				   AND d.phs_cd IN (SELECT phs_cd 
+				                      FROM tb_cm012 
+				                     WHERE proj_id = b.proj_id 
+				                       AND doc_id = b.doc_id 
+				                       AND use_yn = 'Y' 
+				                       AND phs_cd >= '60' 
+				                       AND fwd_bwd_div_cd = 'F')
+				   and d.phs_proc_seq = (select max(phs_proc_seq) 
+				                           from tb_rq003 
+				                          where proj_id = b.proj_id
+				                            and src_grup_cd = b.src_grup_cd
+				                            and dep_req_id = b.dep_req_id)
+		        minus
+		        select /* 최종배포소스목록 */
+				     a.proj_id
+				     , a.dep_id 
+				     , a.dep_phs_div_cd
+				     , a.svn_src_url
+				     , a.svn_src_nm
+				  from tb_dp006 a
+				 where a.proj_id = #projId#
+				   and a.dep_id = #depId#
+				   and a.dep_phs_div_cd = #depPhsDivCd#
+				   and a.dep_freq = (select CASE max(dep_freq) WHEN 0 THEN 1 ELSE max(dep_freq) END
+				                       from tb_dp006
+				                      where proj_id = #projId#
+				                        and dep_id = #depId#
+				                        and dep_phs_div_cd = #depPhsDivCd#)	) w
+		     , tb_rq001 x
+		     , tb_rq002 y
+		 where x.proj_id = w.proj_id
+		   and x.dep_id = w.dep_id
+		   and y.proj_id = x.proj_id
+		   and y.src_grup_cd = x.src_grup_cd
+		   and y.dep_req_id = x.dep_req_id
+		   and y.svn_src_url = w.svn_src_url
+		   and y.svn_src_nm = w.svn_src_nm
+		 order by y.svn_src_url, y.svn_src_nm, y.svn_src_rev_num
+	]]>
+	</select>
+	
+	<select id="SelectNewSourceList" parameterClass="map" resultClass="sourceDto">
+	    select /* SelectNewSourceList */
+	         y.proj_id AS projId
+	       , y.src_grup_cd AS srcGrupCd
+	       , y.dep_req_id AS depReqId
+	       , y.seq AS seq
+	       , y.svn_src_url AS svnSrcUrl
+	       , y.svn_src_nm AS svnSrcNm
+	       , y.svn_src_rev_num AS svnSrcRevNum
+	       , y.svn_src_athr_id AS svnSrcAthrId
+	       , y.svn_repos_cd AS svnReposCd
+	       , y.first_inpt_usr_id AS firstInptUsrId
+	       , y.first_inpt_time AS firstInptTime
+	       , y.last_modi_usr_id AS lastModiUsrId
+	       , y.last_modi_time AS lastModiTime
+	      from (
+	        select /* 배포요청소스목록 */
+	             b.proj_id
+	             , b.dep_id
+	             , #depPhsDivCd# as dep_phs_div_cd
+	             , c.svn_src_url
+	             , c.svn_src_nm
+	             , max(c.svn_src_rev_num) AS svn_src_rev_num
+	          from tb_rq001 b
+	             , tb_rq002 c
+	             , tb_rq003 d
+	         where b.proj_id = #projId#
+	           and b.dep_id = #depId#
+	           and c.proj_id = b.proj_id
+	           and c.src_grup_cd = b.src_grup_cd
+	           and c.dep_req_id = b.dep_req_id
+	           and d.proj_id = b.proj_id
+	           and d.src_grup_cd = b.src_grup_cd
+	           and d.dep_req_id = b.dep_req_id
+	           AND d.phs_cd IN (SELECT phs_cd 
+	                              FROM tb_cm012 
+	                             WHERE proj_id = b.proj_id 
+	                               AND doc_id = b.doc_id 
+	                               AND use_yn = 'Y' 
+	                               AND phs_cd >= #phsCd# 
+	                               AND fwd_bwd_div_cd = 'F')
+	           and d.phs_proc_seq = (select max(phs_proc_seq) 
+	                                   from tb_rq003 
+	                                  where proj_id = b.proj_id
+	                                    and src_grup_cd = b.src_grup_cd
+	                                    and dep_req_id = b.dep_req_id)
+		     GROUP BY b.proj_id
+		         , b.dep_id
+		         , #depPhsDivCd#
+		         , c.svn_src_url
+		         , c.svn_src_nm
+	        minus
+	        select /* 최종배포소스목록 */
+	             a.proj_id
+	             , a.dep_id 
+	             , a.dep_phs_div_cd
+	             , a.svn_src_url
+	             , a.svn_src_nm
+	             , max(a.svn_src_rev_num) AS svn_src_rev_num
+	          from tb_dp006 a
+	         where a.proj_id = #projId#
+	           and a.dep_id = #depId#
+	           and a.dep_phs_div_cd = #depPhsDivCd#
+	           and a.dep_freq = (select CASE max(dep_freq) WHEN 0 THEN 1 ELSE max(dep_freq) END 
+	                               from tb_dp006
+	                              where proj_id = #projId#
+	                                and dep_id = #depId#
+	                                and dep_phs_div_cd = #depPhsDivCd#)
+		     GROUP BY a.proj_id
+		             , a.dep_id 
+		             , a.dep_phs_div_cd
+		             , a.svn_src_url
+		             , a.svn_src_nm  ) w
+	         , tb_rq001 x
+	         , tb_rq002 y
+	     where x.proj_id = w.proj_id
+	       and x.dep_id = w.dep_id
+	       and y.proj_id = x.proj_id
+	       and y.src_grup_cd = x.src_grup_cd
+	       and y.dep_req_id = x.dep_req_id
+	       and y.svn_src_url = w.svn_src_url
+	       and y.svn_src_nm = w.svn_src_nm
+	     order by y.svn_src_url, y.svn_src_nm, y.svn_src_rev_num DESC
+	</select>
+
+	<!-- 배포ID를 배포요청과 연결 linkDepId() rq001, rq003 함께 update 됨 -->
+	<update id="UpdateRequestDeployId" parameterClass="statusDto">
+		UPDATE /* UpdateRequestDeployId */
+		       tb_rq001
+		   SET dep_id = #depId#
+		     , last_modi_usr_id = #lastModiUsrId#
+		     , last_modi_time = SYSDATE
+		 WHERE (proj_id, src_grup_cd, dep_req_id) IN
+		   (SELECT d.proj_id, d.src_grup_cd, d.dep_req_id
+		      FROM (SELECT DISTINCT 
+		                 b.proj_id
+		                 , b.src_grup_cd
+		                 , b.dep_req_id
+		                 , MAX(b.phs_proc_seq) OVER(PARTITION BY b.proj_id, b.src_grup_cd, b.dep_req_id) AS max_phs_proc_seq
+		              FROM tb_rq001 a
+		                 , tb_rq003 b
+		             WHERE a.proj_id = b.proj_id
+		               AND a.src_grup_cd = b.src_grup_cd
+		               AND a.dep_req_id = b.dep_req_id
+		               AND a.proj_id = #projId#
+		               AND a.src_grup_cd = #srcGrupCd#
+		               <isNotEqual property="depReqDate" compareValue="00000000">
+		               AND a.dep_req_date = #depReqDate#
+		               </isNotEqual>
+		               <isNotEmpty property="rglrUrgntDivCd">
+		               AND a.rglr_urgnt_div_cd = #rglrUrgntDivCd#
+		               </isNotEmpty>
+	                   <isNotEmpty prepend="AND" property="rglrUrgntDivCds">
+	                     <iterate prepend="a.rglr_urgnt_div_cd IN " property="rglrUrgntDivCds" open="(" close=")" conjunction=",">
+	                       $rglrUrgntDivCds[]$
+	                     </iterate>
+	                   </isNotEmpty>
+	                   <isNotEmpty prepend="AND" property="depReqIds">
+	                     <iterate prepend="a.dep_req_id IN " property="depReqIds" open="(" close=")" conjunction=",">
+	                       $depReqIds[]$
+	                     </iterate>
+	                   </isNotEmpty>		              
+		           ) c
+		         , tb_rq003 d
+		     WHERE d.proj_id = c.proj_id
+		       AND d.src_grup_cd = c.src_grup_cd
+		       AND d.dep_req_id = c.dep_req_id
+		       AND d.phs_cd = #phsCd#
+		       AND d.phs_proc_seq = c.max_phs_proc_seq)	
+	</update>
+	
+	<!-- 문서상태 추가 addDocStat(rq003) -->
+	<insert id="InsertRequestDocumentStatus" parameterClass="statusDto">
+		INSERT /* InsertRequestDocumentStatus */ 
+		  INTO tb_rq003 (
+		       proj_id, 
+		       src_grup_cd, 
+		       dep_req_id, 
+		       phs_proc_seq,
+		       phs_cd, 
+		       comments,
+		       dep_id,
+		       doc_id,
+		       first_inpt_usr_id, 
+		       first_inpt_time, 
+		       last_modi_usr_id, 
+		       last_modi_time)
+		SELECT c.proj_id
+		     , c.src_grup_cd
+		     , c.dep_req_id
+		     , (SELECT MAX(phs_proc_seq)+1 
+		          FROM tb_rq003 
+		         WHERE proj_id = d.proj_id 
+		           AND src_grup_cd = d.src_grup_cd 
+		           AND dep_req_id = d.dep_req_id) AS phs_proc_seq
+		     , #fwardPhsCd# AS phs_cd
+		     , #comments# AS comments
+		     , #depId# AS dep_id
+		     , #docId# AS doc_id
+		     , #firstInptUsrId# AS first_inpt_usr_id
+		     , SYSDATE AS first_inpt_time
+		     , #lastModiUsrId# AS last_modi_usr_id
+		     , SYSDATE AS last_modi_time
+		  FROM (SELECT DISTINCT 
+		             a.proj_id
+		             , a.src_grup_cd
+		             , a.dep_req_id
+		             , MAX(b.phs_proc_seq) OVER(PARTITION BY b.proj_id, b.src_grup_cd, b.dep_req_id) AS max_phs_proc_seq
+		          FROM tb_rq001 a
+		             , tb_rq003 b
+		         WHERE a.proj_id = b.proj_id
+		           AND a.src_grup_cd = b.src_grup_cd
+		           AND a.dep_req_id = b.dep_req_id
+		           AND a.proj_id = #projId#
+		           AND a.src_grup_cd = #srcGrupCd#
+		           <isNotEqual property="depReqDate" compareValue="00000000">
+		           AND a.dep_req_date = #depReqDate#
+		           </isNotEqual>
+		           <isNotEmpty property="rglrUrgntDivCd">
+		           AND a.rglr_urgnt_div_cd = #rglrUrgntDivCd#
+		           <isNotEqual property="rglrUrgntDivCd" compareValue="R">
+                   AND a.dep_id = #depId#
+		           </isNotEqual>
+		           </isNotEmpty>
+	               <isNotEmpty prepend="AND" property="rglrUrgntDivCds">
+	                 <iterate prepend="a.rglr_urgnt_div_cd IN " property="rglrUrgntDivCds" open="(" close=")" conjunction=",">
+	                   $rglrUrgntDivCds[]$
+	                 </iterate>
+	               </isNotEmpty>
+	               <isNotEmpty prepend="AND" property="depReqIds">
+	                 <iterate prepend="a.dep_req_id IN " property="depReqIds" open="(" close=")" conjunction=",">
+	                   $depReqIds[]$
+	                 </iterate>
+	               </isNotEmpty>
+		       ) c
+		     , tb_rq003 d
+		 WHERE d.proj_id = c.proj_id
+		   AND d.src_grup_cd = c.src_grup_cd
+		   AND d.dep_req_id = c.dep_req_id
+		   AND d.phs_cd = #phsCd#
+		   AND d.phs_proc_seq = c.max_phs_proc_seq 	
+	</insert>
+	
+	<select id="SelectRecipientsForMailMessage" parameterClass="map" resultClass="requestDto">
+		SELECT /* SelectRecipientsForMailMessage */ 
+		     a.proj_id AS projId
+		     , a.src_grup_cd AS srcGrupCd
+		     , a.dep_req_id AS depReqId
+		     , a.devpr_id AS devprId
+		     , a.wrkr_id AS wrkrId
+		     , a.subject AS subject
+		  FROM tb_rq001 a
+		     , tb_rq003 b
+		 WHERE a.proj_id = #projId#
+		   AND a.dep_id = #depId#
+		   AND b.proj_id = a.proj_id
+		   AND b.src_grup_cd = a.src_grup_cd
+		   AND b.dep_req_id = a.dep_req_id
+		   AND b.phs_cd = #phsCd#
+		   AND b.phs_proc_seq = (SELECT MAX(phs_proc_seq) 
+		                           FROM tb_rq003 
+		                          WHERE proj_id = a.proj_id
+		                            AND src_grup_cd = a.src_grup_cd
+		                            AND dep_req_id = a.dep_req_id)	
+	</select>
+	
+	<select id="SelectRequestStatusCount" parameterClass="map" resultClass="Integer">
+		SELECT /* SelectRequestStatusCount */ COUNT(d.dep_req_id) AS cnt
+		  FROM (SELECT DISTINCT 
+		             a.proj_id
+		             , a.src_grup_cd
+	                 , a.dep_req_id
+	                 , MAX(b.phs_proc_seq) OVER(PARTITION BY b.proj_id, b.src_grup_cd, b.dep_req_id) AS max_phs_proc_seq
+	              FROM tb_rq001 a
+	                 , tb_rq003 b
+	             WHERE a.proj_id = b.proj_id
+	               AND a.src_grup_cd = b.src_grup_cd
+	               AND a.dep_req_id = b.dep_req_id
+	               AND a.proj_id = #projId#
+	               AND a.src_grup_cd = #srcGrupCd#
+	               <isNotEqual property="depReqDate" compareValue="00000000">
+	               AND a.dep_req_date = #depReqDate#
+	               </isNotEqual>
+	               <isNotEmpty property="rglrUrgntDivCd">
+	               AND a.rglr_urgnt_div_cd = #rglrUrgntDivCd#
+	               </isNotEmpty>
+				   <isNotEmpty prepend="AND" property="rglrUrgntDivCds">
+				     <iterate prepend="a.rglr_urgnt_div_cd IN " property="rglrUrgntDivCds" open="(" close=")" conjunction=",">
+					   $rglrUrgntDivCds[]$
+				     </iterate>
+				   </isNotEmpty>
+				   <isNotEmpty prepend="AND" property="depReqIds">
+				     <iterate prepend="a.dep_req_id IN " property="depReqIds" open="(" close=")" conjunction=",">
+					   $depReqIds[]$
+				     </iterate>
+				   </isNotEmpty>
+	           ) c
+	         , tb_rq003 d
+	     WHERE d.proj_id = c.proj_id
+	       AND d.src_grup_cd = c.src_grup_cd
+	       AND d.dep_req_id = c.dep_req_id
+	       AND d.phs_cd = #phsCd#
+	       AND d.phs_proc_seq = c.max_phs_proc_seq	
+	</select>
+	
+	<select id="SelectRequestAndReceiptCount" parameterClass="map" resultClass="requestCountDto">
+		SELECT /* SelectRequestAndReceiptCount */
+		     cc.proj_id AS projId
+		     , cc.src_grup_cd AS srcGrupCd
+		     , cc.dep_req_id AS depReqId
+		     , SUM(CASE WHEN cc.phs_cd = '12' 
+		                THEN (SELECT COUNT(DISTINCT dep_req_id)
+		                        FROM tb_rq003 
+		                       WHERE proj_id = cc.proj_id 
+		                         AND src_grup_cd = cc.src_grup_cd 
+		                         AND dep_req_id = cc.dep_req_id
+		                         AND dep_id = #depId#
+		                         AND phs_cd = '30')
+		                ELSE 0 
+		           END) AS reqCnt
+		     , SUM(CASE WHEN cc.phs_cd = '30' THEN 1 ELSE 0 END) AS rcptCnt
+		  FROM tb_rq001 bb,
+		       tb_rq003 cc  
+		 WHERE cc.proj_id = bb.proj_id
+		   AND cc.src_grup_cd = bb.src_grup_cd
+		   AND cc.dep_req_id = bb.dep_req_id
+		   AND cc.phs_cd IN ('12', '30')
+		   AND cc.phs_proc_seq = (SELECT MAX(phs_proc_seq) 
+		                            FROM tb_rq003
+		                           WHERE proj_id = bb.proj_id 
+		                             AND src_grup_cd = bb.src_grup_cd 
+		                             AND dep_req_id = bb.dep_req_id)
+		   AND bb.proj_id = #projId#
+		   AND bb.src_grup_cd = LOWER(SUBSTR(#depId#, 1, 2))
+		   AND bb.dep_req_date = SUBSTR(#depId#, 4, 8)
+		   AND bb.rglr_urgnt_div_cd = CASE SUBSTR(#depId#, 13, 4) WHEN '1000' THEN 'R' WHEN 'TEST' THEN 'T' ELSE 'U' END
+		 GROUP BY cc.proj_id, cc.src_grup_cd, cc.dep_req_id	
+	</select>
+		
+	<update id="UpdateReRequestDeployId" parameterClass="statusDto">
+		UPDATE /* UpdateReRequestDeployId */ 
+		     tb_rq001
+		   SET dep_id = #depId#
+		     , last_modi_usr_id = #lastModiUsrId#
+		     , last_modi_time = SYSDATE
+		 WHERE (proj_id, src_grup_cd, dep_req_id) IN (
+				SELECT 
+				     f.proj_id
+				     , f.src_grup_cd
+				     , f.dep_req_id
+				  FROM tb_rq003 f
+				     , (SELECT d.proj_id
+				             , d.src_grup_cd
+				             , d.dep_req_id
+				             , MAX(d.phs_proc_seq) AS phs_proc_seq
+				          FROM tb_rq003 d
+				             , (SELECT a.proj_id
+				                     , a.src_grup_cd
+				                     , a.dep_req_id
+				                     , a.phs_proc_seq
+				                  FROM tb_rq003 a
+				                     , tb_rq001 c
+				                 WHERE c.proj_id = #projId#
+				                   AND c.src_grup_cd = #srcGrupCd#
+				                   AND c.dep_req_date = #depReqDate#
+				                   AND c.rglr_urgnt_div_cd = 'R'
+				                   AND a.proj_id = c.proj_id
+				                   AND a.src_grup_cd = c.src_grup_cd
+				                   AND a.dep_req_id = c.dep_req_id
+				                   AND a.phs_proc_seq = ( SELECT MAX(b.phs_proc_seq)
+				                                            FROM tb_rq003 b
+				                                           WHERE b.proj_id = a.proj_id
+				                                             AND b.src_grup_cd = a.src_grup_cd
+				                                             AND b.dep_req_id = a.dep_req_id )
+				                   AND a.phs_cd = '12') e
+				         WHERE d.proj_id = e.proj_id
+				           AND d.src_grup_cd = e.src_grup_cd
+				           AND d.dep_req_id = e.dep_req_id
+				           AND d.phs_proc_seq &lt; e.phs_proc_seq
+				           AND d.dep_id IS NOT NULL
+				         GROUP BY d.proj_id, d.src_grup_cd, d.dep_req_id) g
+				 WHERE f.proj_id = g.proj_id
+				   AND f.src_grup_cd = g.src_grup_cd
+				   AND f.dep_req_id = g.dep_req_id
+				   AND f.phs_proc_seq = g.phs_proc_seq
+				   AND f.dep_id = #depId#	)
+	</update>
+	
+	<insert id="InsertReRequestDocumentStatus" parameterClass="statusDto">
+		INSERT /* InsertReRequestDocumentStatus */ 
+		  INTO tb_rq003 (
+		       proj_id, 
+		       src_grup_cd, 
+		       dep_req_id, 
+		       phs_proc_seq,
+		       phs_cd, 
+		       comments,
+		       dep_id,
+		       doc_id,
+		       first_inpt_usr_id, 
+		       first_inpt_time, 
+		       last_modi_usr_id, 
+		       last_modi_time)
+		SELECT 
+		     f.proj_id
+		     , f.src_grup_cd
+		     , f.dep_req_id
+		     , (SELECT MAX(phs_proc_seq)+1 
+		          FROM tb_rq003 
+		         WHERE proj_id = f.proj_id 
+		           AND src_grup_cd = f.src_grup_cd 
+		           AND dep_req_id = f.dep_req_id) AS phs_proc_seq
+		     , #fwardPhsCd# AS phs_cd
+		     , #comments# AS comments
+		     , #depId# AS dep_id
+		     , #docId# AS doc_id
+		     , #firstInptUsrId# AS first_inpt_usr_id
+		     , SYSDATE AS first_inpt_time
+		     , #lastModiUsrId# AS last_modi_usr_id
+		     , SYSDATE AS last_modi_time
+		  FROM tb_rq003 f
+		     , (SELECT d.proj_id
+		             , d.src_grup_cd
+		             , d.dep_req_id
+		             , MAX(d.phs_proc_seq) AS phs_proc_seq
+		          FROM tb_rq003 d
+		             , (SELECT a.proj_id
+		                     , a.src_grup_cd
+		                     , a.dep_req_id
+		                     , a.phs_proc_seq
+		                  FROM tb_rq003 a
+		                     , tb_rq001 c
+		                 WHERE c.proj_id = #projId#
+		                   AND c.src_grup_cd = #srcGrupCd#
+		                   AND c.dep_req_date = #depReqDate#
+		                   AND c.rglr_urgnt_div_cd = 'R'
+		                   AND a.proj_id = c.proj_id
+		                   AND a.src_grup_cd = c.src_grup_cd
+		                   AND a.dep_req_id = c.dep_req_id
+		                   AND a.phs_proc_seq = ( SELECT MAX(b.phs_proc_seq)
+		                                            FROM tb_rq003 b
+		                                           WHERE b.proj_id = a.proj_id
+		                                             AND b.src_grup_cd = a.src_grup_cd
+		                                             AND b.dep_req_id = a.dep_req_id )
+		                   AND a.phs_cd = '12') e
+		         WHERE d.proj_id = e.proj_id
+		           AND d.src_grup_cd = e.src_grup_cd
+		           AND d.dep_req_id = e.dep_req_id
+		           AND d.phs_proc_seq &lt; e.phs_proc_seq
+		           AND d.dep_id IS NOT NULL
+		         GROUP BY d.proj_id, d.src_grup_cd, d.dep_req_id) g
+		 WHERE f.proj_id = g.proj_id
+		   AND f.src_grup_cd = g.src_grup_cd
+		   AND f.dep_req_id = g.dep_req_id
+		   AND f.phs_proc_seq = g.phs_proc_seq
+		   AND f.dep_id = #depId#		  	
+	</insert>
+
+	<update id="UpdatePhsProcMaxSeq" parameterClass="statusDto">
+		MERGE INTO tb_rq001 x
+		USING ( 
+			SELECT c.proj_id
+			     , c.src_grup_cd
+			     , c.dep_req_id
+			     , c.phs_proc_max_seq + 1 AS phs_proc_max_seq
+	          FROM (SELECT
+		                 a.proj_id
+		                 , a.src_grup_cd
+		                 , a.dep_req_id
+		                 , a.phs_proc_max_seq
+		              FROM tb_rq001 a
+		             WHERE a.proj_id = #projId#
+		               AND a.src_grup_cd = #srcGrupCd#
+		            <isNotEqual property="depReqDate" compareValue="00000000">
+		               AND a.dep_req_date = #depReqDate#
+		            </isNotEqual>
+		            <isNotEmpty property="rglrUrgntDivCd">
+		               AND a.rglr_urgnt_div_cd = #rglrUrgntDivCd#
+		            <isNotEqual property="rglrUrgntDivCd" compareValue="R">
+		               AND a.dep_id = #depId#
+					</isNotEqual>
+		            </isNotEmpty>
+	                <isNotEmpty prepend="AND" property="rglrUrgntDivCds">
+	                   <iterate prepend="a.rglr_urgnt_div_cd IN " property="rglrUrgntDivCds" open="(" close=")" conjunction=",">
+	                       $rglrUrgntDivCds[]$
+	                   </iterate>
+	                </isNotEmpty>
+	                <isNotEmpty prepend="AND" property="depReqIds">
+	                   <iterate prepend="a.dep_req_id IN " property="depReqIds" open="(" close=")" conjunction=",">
+	                       $depReqIds[]$
+	                   </iterate>
+	                </isNotEmpty>
+		           ) c
+		         , tb_rq003 d
+		     WHERE d.proj_id = c.proj_id
+		       AND d.src_grup_cd = c.src_grup_cd
+		       AND d.dep_req_id = c.dep_req_id
+		       AND d.phs_cd = #phsCd#
+		       AND d.phs_proc_seq = c.phs_proc_max_seq
+	    ) y
+		ON (x.proj_id = y.proj_id AND x.src_grup_cd = y.src_grup_cd AND x.dep_req_id = y.dep_req_id)
+		WHEN MATCHED THEN
+  			UPDATE SET x.phs_proc_max_seq = y.phs_proc_max_seq
+	</update>
+</sqlMap>
