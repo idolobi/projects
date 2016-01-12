@@ -8,8 +8,8 @@
 	<bean id="polestarDS" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
 		<property name="driverClassName" value="oracle.jdbc.driver.OracleDriver" />
 		<property name="url" value="jdbc:oracle:thin:@ip:port:sid" />
-		<property name="username" value="deployer" />
-		<property name="password" value="de@pl$x1M" />
+		<property name="username" value="username" />
+		<property name="password" value="password" />
 		<property name="initialSize" value="1" />
 		<property name="validationQuery" value="select 1 from dual" />
 	</bean>
