@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap      
+    PUBLIC "-//ibatis.apache.org//DTD SQL Map 2.0//EN"      
+    "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+<sqlMap namespace="Deploy">
+	<typeAlias alias="deployDto" type="com.es.deployer.deploy.dto.DeployDto" />
+	<typeAlias alias="mailMessageDto" type="com.es.deployer.deploy.dto.MailMessageDto" />
+	
+	<!-- 배포ID 만들기 -->
+	<select id="SelectNewDeployId" parameterClass="map" resultClass="String">
+		SELECT /* makeDepId(projId, srcGrupCd) */ 
+		       UPPER(#srcGrupCd#) || '_' 
+		       || FN_GET_NEXT_DEPLOY_DATE(#projId#, #srcGrupCd#) || '_' 
+		       || rglr_dep_hhmm
+		  FROM tb_pj005
+		 WHERE proj_id = #projId#
+		   AND src_grup_cd = #srcGrupCd#
+	</select>
+
+	<!-- 배포ID 만들기 -->
+	<select id="SelectCountDeployId" parameterClass="map" resultClass="int">
+		SELECT /* existDepId(projId, depId) */ 
+		       COUNT(dep_id) AS cnt_dep_id
+		  FROM tb_dp001
+		 WHERE proj_id = #projId#
+		   AND dep_id = #depId#
+	</select>
+	
+	<!-- 배포정보등록 -->
+	<insert id="InsertDeploy" parameterClass="deployDto">
+		INSERT /* registDepId(projId, srcGrupCd) */ 
+		  INTO tb_dp001 (
+		       proj_id, 
+		       dep_id, 
+		       src_grup_cd, 
+		       dep_date,
+		       rglr_urgnt_div_cd, 
+		       fnsh_yn,
+		       dvlp_fnsh_yn,
+		       first_inpt_usr_id, 
+		       first_inpt_time, 
+		       last_modi_usr_id, 
+		       last_modi_time )
+		VALUES (
+		       #projId#,
+		       #depId#,
+		       #srcGrupCd#,
+		       #depDate#,
+		       #rglrUrgntDivCd#,
+		       #fnshYn#,
+		       #dvlpFnshYn#,
+		       #firstInptUsrId#,
+		       SYSDATE,
+		       #lastModiUsrId#,
+		       SYSDATE )	
+	</insert>
+	
+	<!-- 마감(lock) 여부 -->
+	<update id="UpdateFnshYn" parameterClass="map">
+		UPDATE tb_dp001
+		   SET fnsh_yn = #fnshYn#, 
+		       last_modi_usr_id = #lastModiUsrId#,
+		       last_modi_time = SYSDATE
+		 WHERE proj_id = #projId#
+		   AND dep_id = #depId#	
+	</update>
+	
+	<select id="SelectCountLockedDeployId" parameterClass="map" resultClass="int">
+		SELECT COUNT(dep_id) AS cnt
+		  FROM tb_dp001
+		 WHERE proj_id = #projId#
+		   AND dep_id = #depId#	
+		   <isNotEqual property="phase" compareValue="dvlp">
+		   AND fnsh_yn = 'Y'
+		   </isNotEqual>
+		   <isEqual property="phase" compareValue="dvlp">
+		   AND dvlp_fnsh_yn = 'Y'
+		   </isEqual>
+		   
+		   
+	</select>
+	
+	<select id="SelectTestDeployMessage" parameterClass="map" resultClass="mailMessageDto">
+	    SELECT /* SelectTestDeployMessage */ 
+	         a.dep_man_id AS depManId
+	         , (TO_CHAR(sysdate, 'MM') || '월 ' || TO_CHAR(sysdate, 'DD') || '일 ' || b.msg_subj) AS msgSubj
+	         , b.msg_cnts AS msgCnts
+	      FROM tb_pj005 a
+	         , tb_dp011 b
+	     WHERE a.proj_id = #projId#
+	       AND a.src_grup_cd = #srcGrupCd#
+	       AND a.proj_id = b.proj_id
+	       AND a.src_grup_cd = b.src_grup_cd
+	       AND b.msg_cd = (SELECT 
+	                         CASE (SELECT schd_type_cd 
+	                                 FROM tb_dp012
+	                                WHERE proj_id = #projId#
+	                                  AND src_grup_cd = #srcGrupCd#
+	                                  AND schd_year = TO_CHAR(SYSDATE, 'YYYY')
+	                                  AND schd_mmdd = TO_CHAR(SYSDATE, 'MMDD'))
+	                         WHEN 'HD' THEN 'HD'
+	                         ELSE  
+	                              CASE (SELECT rglr_urgnt_div_cd
+	                                      FROM tb_dp001
+	                                     WHERE proj_id = #projId#
+	                                       AND dep_id = #depId#) 
+	                              WHEN 'R' THEN 'NR' 
+	                              WHEN 'U' THEN 'UR' 
+	                              WHEN 'T' THEN 'TT' 
+	                              END
+	                         END AS msg_cd FROM dual)
+	</select>
+	
+	<select id="SelectTestDeployFailMessage" parameterClass="map" resultClass="mailMessageDto">
+		SELECT /* SelectTestDeployFailMessage */ 
+		     a.dep_man_id AS depManId
+		     , (TO_CHAR(sysdate, 'MM') || '월 ' || TO_CHAR(sysdate, 'DD') || '일 ' || b.msg_subj) AS msgSubj
+		     , b.msg_cnts AS msgCnts
+		  FROM tb_pj005 a
+		     , tb_dp011 b
+		 WHERE a.proj_id = #projId#
+		   AND a.src_grup_cd = #srcGrupCd#
+		   AND a.proj_id = b.proj_id
+		   AND a.src_grup_cd = b.src_grup_cd
+		   AND b.msg_cd = #msgType#
+	</select>
+	
+	<select id="SelectDeployInfo" parameterClass="map" resultClass="deployDto">
+		SELECT /* SelectDeployInfo */
+		     proj_id AS projId
+		     , dep_id AS depId
+		     , src_grup_cd AS srcGrupCd
+		     , rglr_urgnt_div_cd AS rglrUrgntDivCd
+		     , fnsh_yn AS fnshYn
+		     , dep_date AS depDate
+		  FROM tb_dp001
+		 WHERE proj_id = #projId#
+		   AND dep_id = #depId#	
+	</select>
+	
+</sqlMap>
