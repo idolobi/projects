@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="dms-exejar" basedir=".">
+	<path id="classpath">
+		<fileset dir="lib">
+			<include name="*.jar" />
+		</fileset>
+	</path>
+	<target name="build">
+		<echo>==================================================</echo>
+		<echo>COMPILE</echo>
+		<echo>==================================================</echo>
+		<delete dir="build/com"/>
+		<javac srcdir="src" destdir="build"
+			classpathref="classpath"
+			encoding="utf-8"
+			failonerror="on"
+			includeAntRuntime="no"/>		
+		<echo>==================================================</echo>
+		<echo>COPY</echo>
+		<echo>==================================================</echo>
+		<copy todir="build" verbose="true">
+			<fileset dir="src">
+				<include name="**/*.xml"/>
+				<include name="**/*.properties"/>
+		    </fileset>
+		</copy>
+		<echo>==================================================</echo>
+		<echo>JAR</echo>
+		<echo>==================================================</echo>
+		<delete file="bin/deploy-deployer.jar"/>
+		<jar encoding="UTF-8" destfile="bin/deploy-deployer.jar">
+			<manifest>
+				<attribute name="Main-Class" value="com.es.deployer.Execute"/>
+				<attribute name="Class-Path" value="."/>
+			</manifest>
+			<fileset dir="build"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/antlr-runtime-3.4.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/com.springsource.org.aopalliance-1.0.0.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/commons-dbcp-1.4.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/commons-logging-1.1.1.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/commons-net-3.0.1.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/commons-pool-1.6.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/ibatis-2.3.4.726.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/log4j-1.2.16.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/ojdbc6.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/org.springframework.aop-3.1.0.M1.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/org.springframework.asm-3.1.0.M1.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/org.springframework.beans-3.1.0.M1.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/org.springframework.context-3.1.0.M1.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/org.springframework.context.support-3.1.0.M1.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/org.springframework.core-3.1.0.M1.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/org.springframework.expression-3.1.0.M1.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/org.springframework.jdbc-3.1.0.M1.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/org.springframework.orm-3.1.0.M1.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/org.springframework.test-3.1.0.M1.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/org.springframework.transaction-3.1.0.M1.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/mail.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/activation.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/sequence-library-1.0.2.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/sqljet-1.1.10.jar"/>
+			<zipfileset excludes="META-INF/*.SF" src="lib/svnkit-1.8.5.jar"/>
+		</jar>
+		<echo>==================================================</echo>
+	</target>
+</project>
