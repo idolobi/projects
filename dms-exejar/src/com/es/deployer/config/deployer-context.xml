@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans 
+	                       http://www.springframework.org/schema/beans/spring-beans-3.1.xsd">
+
+	<!-- DATABASE -->
+	<bean id="polestarDS" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+		<property name="driverClassName" value="oracle.jdbc.driver.OracleDriver" />
+		<property name="url" value="jdbc:oracle:thin:@ip:port:sid" />
+		<property name="username" value="username" />
+		<property name="password" value="password" />
+		<property name="initialSize" value="1" />
+		<property name="validationQuery" value="select 1 from dual" />
+	</bean>
+	
+	<bean id="sqlMapClient" class="org.springframework.orm.ibatis.SqlMapClientFactoryBean">
+    	<property name="dataSource" ref="polestarDS" />
+    	<property name="configLocation" value="com/es/deployer/config/deployer-sqlmap-config.xml" />
+    </bean>
+    <bean id="sqlMapClientTemplate" class="org.springframework.orm.ibatis.SqlMapClientTemplate">
+    	<property name="sqlMapClient" ref="sqlMapClient" />
+    </bean>
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="polestarDS" />
+	</bean>
+	<bean id="transactionTemplate" class="org.springframework.transaction.support.TransactionTemplate">
+		<property name="transactionManager" ref="transactionManager" />
+	</bean>	
+	
+	<!-- SERVICE -->
+	<bean id="deployId" class="com.es.deployer.deploy.service.DeployID">
+		<property name="deployDao"  ref="deployDao" />
+	</bean>
+	<bean id="accept" class="com.es.deployer.deploy.service.Accept">
+		<property name="requestDao" ref="requestDao" />
+		<property name="deployDao"  ref="deployDao" />
+		<property name="statusDao"  ref="statusDao" />
+		<property name="transactionTemplate" ref="transactionTemplate" />
+	</bean>
+	<bean id="release" class="com.es.deployer.deploy.service.Release">
+		<property name="requestDao" ref="requestDao" />
+		<property name="deployDao"  ref="deployDao" />
+		<property name="statusDao"  ref="statusDao" />
+		<property name="transactionTemplate" ref="transactionTemplate" />
+	</bean>
+	<bean id="update" class="com.es.deployer.deploy.service.Update" />
+	<bean id="merge" class="com.es.deployer.deploy.service.Merge">
+		<property name="requestDao"   ref="requestDao" />
+		<property name="deployLogDao" ref="deployLogDao" />
+	</bean>
+	<bean id="build" class="com.es.deployer.deploy.service.Build">
+		<property name="requestDao" ref="requestDao" />
+	</bean>
+	<bean id="pack" class="com.es.deployer.deploy.service.Pack">
+		<property name="requestDao" ref="requestDao" />
+	</bean>
+	<bean id="deploy" class="com.es.deployer.deploy.service.Deploy">
+		<property name="requestDao" ref="requestDao" />
+		<property name="deployDao"  ref="deployDao" />
+		<property name="statusDao"  ref="statusDao" />
+		<property name="transactionTemplate" ref="transactionTemplate" />
+	</bean>
+	<bean id="notice" class="com.es.deployer.deploy.service.Notice">
+		<property name="requestDao" ref="requestDao" />
+		<property name="deployDao"  ref="deployDao" />
+		<property name="statusDao"  ref="statusDao" />
+	</bean>
+	
+	<!-- DAO -->
+	<bean id="deployDao" class="com.es.deployer.deploy.dao.DeployDao">
+		<property name="sqlMapClientTemplate" ref="sqlMapClientTemplate" />
+	</bean>	
+	<bean id="deployLogDao" class="com.es.deployer.deploy.dao.DeployLogDao">
+		<property name="sqlMapClientTemplate" ref="sqlMapClientTemplate" />
+		<property name="transactionTemplate" ref="transactionTemplate" />
+	</bean>
+	<bean id="requestDao" class="com.es.deployer.deploy.dao.RequestDao">
+		<property name="sqlMapClientTemplate" ref="sqlMapClientTemplate" />
+	</bean>
+	<bean id="statusDao" class="com.es.deployer.doc.dao.StatusDao">
+		<property name="sqlMapClientTemplate" ref="sqlMapClientTemplate" />
+	</bean>
+</beans>
