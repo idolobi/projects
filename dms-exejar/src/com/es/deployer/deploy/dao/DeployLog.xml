@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap      
+    PUBLIC "-//ibatis.apache.org//DTD SQL Map 2.0//EN"      
+    "http://ibatis.apache.org/dtd/sql-map-2.dtd">
+<sqlMap namespace="DeployLog">
+	<typeAlias alias="DeployLogDto" type="com.es.deployer.deploy.dto.DeployLogDto" />
+	
+	<!-- 총 배포횟수 -->
+	<select id="SelectDeployTimes" parameterClass="map" resultClass="Integer">
+	<![CDATA[
+		SELECT /* SelectDeployTimes */
+		     NVL(MAX(dep_freq), 0) AS depCnt
+		  FROM tb_dp006
+		 WHERE proj_id = #projId#
+		   AND dep_id = #depId#
+		   AND dep_phs_div_cd = #depPhsDivCd#
+	]]>
+	</select>
+	
+	<!-- 다음 배포횟수 -->
+	<select id="SelectDeployFrequency" parameterClass="map" resultClass="Integer">
+	<![CDATA[
+		SELECT CASE WHEN MAX(dep_freq) IS NULL 
+		            THEN 0 
+		            ELSE MAX(dep_freq) + 1 END AS depFreq
+		  FROM tb_dp006
+		 WHERE proj_id = #projId#
+		   AND dep_id = #depId#
+		   AND dep_phs_div_cd = #depPhsDivCd#
+	]]>
+	</select>
+	
+	<!-- 배포소스로그저장 -->
+	<insert id="InsertSvnDeploySourceLog" parameterClass="DeployLogDto">
+	<![CDATA[
+		INSERT INTO tb_dp006 (
+			proj_id
+		    , dep_id
+		    , dep_phs_div_cd
+		    , dep_freq
+		    , file_seq
+		    , svn_src_url
+		    , svn_src_nm
+		    , svn_src_rev_num
+		    , svn_src_proc_cd
+		    , first_inpt_usr_id
+			, first_inpt_time
+			, last_modi_usr_id
+			, last_modi_time 
+		)
+		VALUES (
+			#projId#
+			, #depId#
+			, #depPhsDivCd#
+			, #depFreq#
+			, SQ_TB_DP006_FILE_SEQ.NEXTVAL
+			, #svnSrcUrl#
+			, #svnSrcNm#
+			, #svnSrcRevNum#
+			, #svnSrcProcCd#
+			, 'system'
+			, sysdate
+			, 'system'
+			, sysdate
+		)
+	]]>
+	</insert>
+		
+	<!-- 제외목록 -->
+	<select id="SelectExceptedSourceForTest" parameterClass="map" resultClass="DeployLogDto">
+	<![CDATA[
+		select /* SelectExceptedSourceForTest */ 
+		     y.proj_id as projId
+		     , y.dep_id as depId
+		     , y.dep_phs_div_cd as depPhsDivCd
+		     , y.dep_freq as depFreq
+		     , y.file_seq as fileSeq
+		     , y.svn_src_url as svnSrcUrl
+		     , y.svn_src_nm as svnSrcNm
+		     , y.svn_src_rev_num as svnSrcRevNum
+		     , y.svn_src_proc_cd as svnSrcProcCd
+		     , y.first_inpt_usr_id as firstInptUsrId
+		     , y.first_inpt_time as firstInptTime
+		     , y.last_modi_usr_id as lastModiUsrId
+		     , y.last_modi_time as lastModiTime
+		  from (select /* sources deployed last */
+		             a.proj_id
+		             , a.dep_id 
+		             , a.dep_phs_div_cd
+		             , a.svn_src_url
+		             , a.svn_src_nm
+		             , a.svn_src_rev_num
+		          from tb_dp006 a
+		         where a.proj_id = #projId#
+		           and a.dep_id = #depId#
+		           and a.dep_phs_div_cd = #depPhsDivCd#
+		           and a.dep_freq = (select max(dep_freq)
+		                               from tb_dp006
+		                              where proj_id = a.proj_id
+		                                and dep_id = a.dep_id
+		                                and dep_phs_div_cd = a.dep_phs_div_cd )
+		           AND NOT EXISTS (SELECT 1 
+		                             FROM (select /* requested sources */
+		                                       b.proj_id
+		                                       , b.dep_id
+		                                       , #depPhsDivCd# as dep_phs_div_cd
+		                                       , c.svn_src_url
+		                                       , c.svn_src_nm
+		                                       , c.svn_src_rev_num
+		                                    from tb_rq001 b
+		                                       , tb_rq002 c
+		                                       , tb_rq003 d
+		                                   where b.proj_id = #projId#
+		                                     and b.dep_id = #depId#
+		                                     and c.proj_id = b.proj_id
+		                                     and c.src_grup_cd = b.src_grup_cd
+		                                     and c.dep_req_id = b.dep_req_id
+		                                     and d.proj_id = b.proj_id
+		                                     and d.src_grup_cd = b.src_grup_cd
+		                                     and d.dep_req_id = b.dep_req_id
+		                                     and d.phs_cd IN (select phs_cd 
+		                                                        from tb_cm012 
+		                                                       where proj_id = b.proj_id 
+		                                                         and doc_id = b.doc_id 
+		                                                         and use_yn = 'Y' 
+		                                                         and phs_cd >= '30' 
+		                                                         and fwd_bwd_div_cd = 'F')
+		                                     and d.phs_proc_seq = (select max(phs_proc_seq) 
+		                                                             from tb_rq003 
+		                                                            where proj_id = b.proj_id
+		                                                              and src_grup_cd = b.src_grup_cd
+		                                                              and dep_req_id = b.dep_req_id) ) z
+		                            WHERE a.proj_id = z.proj_id
+		                              AND a.dep_id = z.dep_id
+		                              AND a.dep_phs_div_cd = z.dep_phs_div_cd
+		                              AND a.svn_src_url = z.svn_src_url
+		                              AND a.svn_src_nm = z.svn_src_nm
+		                              AND a.svn_src_rev_num = z.svn_src_rev_num ) ) x
+		     , tb_dp006 y
+		 where y.proj_id = x.proj_id
+		   and y.dep_id = x.dep_id
+		   and y.dep_phs_div_cd = x.dep_phs_div_cd
+		   and y.svn_src_url = x.svn_src_url
+		   and y.svn_src_nm = x.svn_src_nm
+		   and y.dep_freq = 0
+	]]>
+	</select>
+	
+	<select id="SelectExceptedSourceForReal" parameterClass="map" resultClass="DeployLogDto">
+	<![CDATA[
+		select /* SelectExceptedSourceForReal */ 
+		     y.proj_id as projId
+			 , y.dep_id as depId
+			 , y.dep_phs_div_cd as depPhsDivCd
+			 , y.dep_freq as depFreq
+			 , y.file_seq as fileSeq
+			 , y.svn_src_url as svnSrcUrl
+			 , y.svn_src_nm as svnSrcNm
+			 , y.svn_src_rev_num as svnSrcRevNum
+			 , y.svn_src_proc_cd as svnSrcProcCd
+			 , y.first_inpt_usr_id as firstInptUsrId
+			 , y.first_inpt_time as firstInptTime
+			 , y.last_modi_usr_id as lastModiUsrId
+			 , y.last_modi_time as lastModiTime
+		  from (select /* sources deployed last */
+				     a.proj_id
+				     , a.dep_id 
+				     , a.dep_phs_div_cd
+				     , a.svn_src_url
+				     , a.svn_src_nm
+				     , a.svn_src_rev_num
+				  from tb_dp006 a
+				 where a.proj_id = #projId#
+				   and a.dep_id = #depId#
+				   and a.dep_phs_div_cd = #depPhsDivCd#
+				   and a.dep_freq = (select max(dep_freq)
+				                       from tb_dp006
+				                      where proj_id = a.proj_id
+				                        and dep_id = a.dep_id
+				                        and dep_phs_div_cd = a.dep_phs_div_cd)
+		           AND NOT EXISTS (SELECT 1 
+		                             FROM (select /* requested sources */
+		                                       b.proj_id
+		                                       , b.dep_id
+		                                       , #depPhsDivCd# as dep_phs_div_cd
+		                                       , c.svn_src_url
+		                                       , c.svn_src_nm
+		                                       , c.svn_src_rev_num
+		                                    from tb_rq001 b
+		                                       , tb_rq002 c
+		                                       , tb_rq003 d
+		                                   where b.proj_id = #projId#
+		                                     and b.dep_id = #depId#
+		                                     and c.proj_id = b.proj_id
+		                                     and c.src_grup_cd = b.src_grup_cd
+		                                     and c.dep_req_id = b.dep_req_id
+		                                     and d.proj_id = b.proj_id
+		                                     and d.src_grup_cd = b.src_grup_cd
+		                                     and d.dep_req_id = b.dep_req_id
+		                                     and d.phs_cd IN (select phs_cd 
+		                                                        from tb_cm012 
+		                                                       where proj_id = b.proj_id 
+		                                                         and doc_id = b.doc_id 
+		                                                         and use_yn = 'Y' 
+		                                                         and phs_cd >= '60' 
+		                                                         and fwd_bwd_div_cd = 'F')
+		                                     and d.phs_proc_seq = (select max(phs_proc_seq) 
+		                                                             from tb_rq003 
+		                                                            where proj_id = b.proj_id
+		                                                              and src_grup_cd = b.src_grup_cd
+		                                                              and dep_req_id = b.dep_req_id) ) z
+		                            WHERE a.proj_id = z.proj_id
+		                              AND a.dep_id = z.dep_id
+		                              AND a.dep_phs_div_cd = z.dep_phs_div_cd
+		                              AND a.svn_src_url = z.svn_src_url
+		                              AND a.svn_src_nm = z.svn_src_nm
+		                              AND a.svn_src_rev_num = z.svn_src_rev_num ) ) x
+		     , tb_dp006 y
+		 where y.proj_id = x.proj_id
+		   and y.dep_id = x.dep_id
+		   and y.dep_phs_div_cd = x.dep_phs_div_cd
+		   and y.svn_src_url = x.svn_src_url
+		   and y.svn_src_nm = x.svn_src_nm
+		   and y.dep_freq = 0		
+	]]>
+	</select>
+	
+	<select id="SelectRollbackSourceSeq" parameterClass="DeployLogDto" resultClass="Integer">
+		SELECT /* SelectRollbackSourceSeq */ 
+		     COUNT(FILE_SEQ) AS fileCnt
+		  FROM TB_DP006
+		 WHERE PROJ_ID = #projId#
+		   AND DEP_ID = #depId#
+		   AND DEP_PHS_DIV_CD = #depPhsDivCd#
+		   AND DEP_FREQ = #depFreq#
+		   AND SVN_SRC_URL = #svnSrcUrl#
+		   AND SVN_SRC_NM = #svnSrcNm#
+	</select>
+</sqlMap>
